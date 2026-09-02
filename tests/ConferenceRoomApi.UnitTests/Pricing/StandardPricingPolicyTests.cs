@@ -98,6 +98,19 @@ public class StandardPricingPolicyTests
         result.Segments.Should().HaveCount(5);
     }
 
+    [Fact]
+    public void Calculate_DurationNotAMultipleOfSixMinutes_RoundsCostToTheCent()
+    {
+        // 20 minutes = 1/3 hour, a repeating decimal — must not leak into the returned cost.
+        var result = _policy.Calculate(1800m, new TimeOnly(10, 0), new TimeOnly(10, 20));
+
+        result.Segments.Should().ContainSingle();
+        var segment = result.Segments.Single();
+        segment.SegmentCost.Should().Be(600.00m);
+        decimal.GetBits(segment.SegmentCost)[3].Should().Be(decimal.GetBits(600.00m)[3], "scale must be exactly 2 decimal places");
+        result.TotalCost.Should().Be(600.00m);
+    }
+
     [Theory]
     [InlineData(9, 0, 9, 0)] // zero-length
     [InlineData(10, 0, 9, 0)] // inverted
