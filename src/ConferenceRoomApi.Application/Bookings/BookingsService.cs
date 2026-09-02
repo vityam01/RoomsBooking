@@ -80,10 +80,10 @@ public sealed class BookingsService
 
     public async Task<PagedResult<BookingDto>> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default)
     {
-        var (bookings, totalCount) = await _bookingRepository.ListAsync(filter, cancellationToken);
+        var (bookings, totalCount, page, pageSize) = await _bookingRepository.ListAsync(filter, cancellationToken);
         var roomNames = await _roomRepository.GetNamesByIdsAsync(bookings.Select(b => b.RoomId), cancellationToken);
         var items = bookings.Select(b => ToDto(b, roomNames.GetValueOrDefault(b.RoomId, "(deleted room)"))).ToList();
-        return new PagedResult<BookingDto>(items, filter.Page, filter.PageSize, totalCount);
+        return new PagedResult<BookingDto>(items, page, pageSize, totalCount);
     }
 
     public async Task CancelAsync(Guid id, CancellationToken cancellationToken = default)
