@@ -49,7 +49,8 @@ public sealed class BookingRepository : IBookingRepository
         return bookedIds.ToHashSet();
     }
 
-    public async Task<(List<Booking> Items, int TotalCount)> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default)
+    public async Task<(List<Booking> Items, int TotalCount, int Page, int PageSize)> ListAsync(
+        BookingListFilter filter, CancellationToken cancellationToken = default)
     {
         var query = _db.Bookings.AsQueryable();
 
@@ -88,7 +89,7 @@ public sealed class BookingRepository : IBookingRepository
             .Include(b => b.PriceSegments)
             .ToListAsync(cancellationToken);
 
-        return (items, totalCount);
+        return (items, totalCount, page, pageSize);
     }
 
     public void Add(Booking booking) => _db.Bookings.Add(booking);

@@ -240,6 +240,24 @@ public sealed class BookingFlowTests : IntegrationTestBase
         firstPage.Items.Select(b => b.Id).Should().NotIntersectWith(secondPage.Items.Select(b => b.Id));
     }
 
+    [Fact]
+    public async Task ListBookings_PageSizeAboveCap_ReportsTheActuallyAppliedPageSize()
+    {
+        var room = await CreateRoomAsync("Зал Пагінація Ліміт", 10, 1000m);
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(10));
+
+        await Client.PostAsJsonAsync(
+            "/api/bookings", new CreateBookingRequest(room.Id, date, new TimeOnly(9, 0), new TimeOnly(10, 0), null), JsonOptions);
+
+        // Ask for a pageSize far above the server-side cap (100) — the response must reflect
+        // what was actually used, not echo the requested value back.
+        var response = await Client.GetAsync($"/api/bookings?roomId={room.Id}&page=1&pageSize=99999");
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<BookingDto>>(JsonOptions);
+
+        page!.PageSize.Should().Be(100);
+        page.TotalPages.Should().Be(1);
+    }
+
     private async Task<RoomDto> CreateRoomAsync(string name, int capacity, decimal basePricePerHour, List<Guid>? serviceIds = null)
     {
         var response = await Client.PostAsJsonAsync(
