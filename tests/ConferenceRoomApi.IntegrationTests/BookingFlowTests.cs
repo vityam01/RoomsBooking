@@ -157,6 +157,30 @@ public sealed class BookingFlowTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public async Task SearchAvailable_NonPositiveCapacity_Returns400(int capacity)
+    {
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
+
+        var response = await Client.GetAsync($"/api/rooms/available?date={date:yyyy-MM-dd}&startTime=10:00&endTime=11:00&capacity={capacity}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task SearchAvailable_StartAfterEnd_Returns400WithFluentValidationMessage()
+    {
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
+
+        var response = await Client.GetAsync($"/api/rooms/available?date={date:yyyy-MM-dd}&startTime=12:00&endTime=10:00&capacity=1");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("StartTime");
+    }
+
     private async Task<RoomDto> CreateRoomAsync(string name, int capacity, decimal basePricePerHour, List<Guid>? serviceIds = null)
     {
         var response = await Client.PostAsJsonAsync(
