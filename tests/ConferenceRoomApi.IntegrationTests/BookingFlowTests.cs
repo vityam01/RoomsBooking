@@ -240,6 +240,25 @@ public sealed class BookingFlowTests : IntegrationTestBase
         firstPage.Items.Select(b => b.Id).Should().NotIntersectWith(secondPage.Items.Select(b => b.Id));
     }
 
+    [Theory]
+    [InlineData("page=0&pageSize=20")]
+    [InlineData("page=1&pageSize=0")]
+    [InlineData("page=1&pageSize=101")]
+    public async Task ListBookings_InvalidPagingParams_Returns400(string query)
+    {
+        var response = await Client.GetAsync($"/api/bookings?{query}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ListBookings_FromAfterTo_Returns400()
+    {
+        var response = await Client.GetAsync("/api/bookings?from=2026-12-01&to=2026-01-01");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     private async Task<RoomDto> CreateRoomAsync(string name, int capacity, decimal basePricePerHour, List<Guid>? serviceIds = null)
     {
         var response = await Client.PostAsJsonAsync(
