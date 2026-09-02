@@ -139,7 +139,7 @@ public class Program
     /// <summary>
     /// Applies pending EF Core migrations and loads the starter catalog on startup. Safe to
     /// run every time: migrations are idempotent and <see cref="DatabaseSeeder"/> only
-    /// inserts when the additional-services table is empty.
+    /// inserts when the database has no additional services or rooms yet.
     /// </summary>
     private static async Task ApplyMigrationsAndSeedAsync(WebApplication app)
     {
