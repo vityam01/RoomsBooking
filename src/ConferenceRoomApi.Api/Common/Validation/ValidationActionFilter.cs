@@ -47,6 +47,7 @@ public sealed class ValidationActionFilter : IAsyncActionFilter
                 }
 
                 var problemDetails = new ValidationProblemDetails(modelState) { Status = StatusCodes.Status400BadRequest };
+                problemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
                 context.Result = new BadRequestObjectResult(problemDetails);
                 return;
             }
