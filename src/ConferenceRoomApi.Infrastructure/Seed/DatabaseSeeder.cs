@@ -8,13 +8,15 @@ namespace ConferenceRoomApi.Infrastructure.Seed;
 /// <summary>
 /// Loads the starting catalog described in the assignment (rooms A/B/C, the three
 /// additional services) so the API is usable immediately after `docker compose up`.
-/// Idempotent: does nothing if any additional service already exists.
+/// Idempotent: does nothing if either table already has rows, so it's safe to call on every
+/// startup — checking both tables (not just one) means a partially-seeded or
+/// independently-populated database is never mistaken for "not seeded yet".
 /// </summary>
 public static class DatabaseSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext db, CancellationToken cancellationToken = default)
     {
-        if (await db.AdditionalServices.AnyAsync(cancellationToken))
+        if (await db.AdditionalServices.AnyAsync(cancellationToken) || await db.Rooms.AnyAsync(cancellationToken))
         {
             return;
         }
