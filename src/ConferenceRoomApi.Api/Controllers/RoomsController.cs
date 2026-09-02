@@ -40,12 +40,8 @@ public sealed class RoomsController : ControllerBase
     [ProducesResponseType(typeof(List<AvailableRoomDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<List<AvailableRoomDto>>> SearchAvailable(
-        [FromQuery] DateOnly date, [FromQuery] TimeOnly startTime, [FromQuery] TimeOnly endTime, [FromQuery] int capacity,
-        CancellationToken cancellationToken)
-    {
-        var request = new SearchAvailableRoomsRequest(date, startTime, endTime, capacity);
-        return Ok(await _roomsService.SearchAvailableAsync(request, cancellationToken));
-    }
+        [FromQuery] SearchAvailableRoomsRequest request, CancellationToken cancellationToken)
+        => Ok(await _roomsService.SearchAvailableAsync(request, cancellationToken));
 
     /// <summary>Register a new conference room.</summary>
     [HttpPost]
