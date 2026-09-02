@@ -49,12 +49,9 @@ public sealed class BookingRepository : IBookingRepository
         return bookedIds.ToHashSet();
     }
 
-    public Task<List<Booking>> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default)
+    public async Task<(List<Booking> Items, int TotalCount)> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default)
     {
-        var query = _db.Bookings
-            .Include(b => b.BookedServices)
-            .Include(b => b.PriceSegments)
-            .AsQueryable();
+        var query = _db.Bookings.AsQueryable();
 
         if (filter.RoomId is { } roomId)
         {
@@ -76,7 +73,22 @@ public sealed class BookingRepository : IBookingRepository
             query = query.Where(b => b.Status == BookingStatus.Confirmed);
         }
 
-        return query.OrderByDescending(b => b.BookingDate).ThenBy(b => b.StartTime).ToListAsync(cancellationToken);
+        // Count against the un-Included query — cheaper, and Include would be dropped from
+        // the generated SQL anyway, but this keeps the intent explicit.
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var page = Math.Max(filter.Page, 1);
+        var pageSize = Math.Clamp(filter.PageSize, 1, 100);
+
+        var items = await query
+            .OrderByDescending(b => b.BookingDate).ThenBy(b => b.StartTime)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Include(b => b.BookedServices)
+            .Include(b => b.PriceSegments)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 
     public void Add(Booking booking) => _db.Bookings.Add(booking);

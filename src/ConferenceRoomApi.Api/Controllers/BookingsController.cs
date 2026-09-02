@@ -1,5 +1,6 @@
 using ConferenceRoomApi.Application.Bookings;
 using ConferenceRoomApi.Application.Bookings.Dtos;
+using ConferenceRoomApi.Application.Common.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ConferenceRoomApi.Api.Controllers;
@@ -43,14 +44,18 @@ public sealed class BookingsController : ControllerBase
     public async Task<ActionResult<BookingDto>> GetById(Guid id, CancellationToken cancellationToken)
         => Ok(await _bookingsService.GetByIdAsync(id, cancellationToken));
 
-    /// <summary>List bookings, optionally filtered by room and date range.</summary>
+    /// <summary>
+    /// List bookings, optionally filtered by room and date range. Paginated — page/pageSize
+    /// default to 1/20; pageSize is capped at 100 server-side regardless of what's requested.
+    /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(List<BookingDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<BookingDto>>> List(
+    [ProducesResponseType(typeof(PagedResult<BookingDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<BookingDto>>> List(
         [FromQuery] Guid? roomId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to,
-        [FromQuery] bool includeCancelled = false, CancellationToken cancellationToken = default)
+        [FromQuery] bool includeCancelled = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var filter = new BookingListFilter(roomId, from, to, includeCancelled);
+        var filter = new BookingListFilter(roomId, from, to, includeCancelled, page, pageSize);
         return Ok(await _bookingsService.ListAsync(filter, cancellationToken));
     }
 

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using ConferenceRoomApi.Application.AdditionalServices.Dtos;
 using ConferenceRoomApi.Application.Bookings.Dtos;
+using ConferenceRoomApi.Application.Common.Dtos;
 using ConferenceRoomApi.Application.Reports.Dtos;
 using ConferenceRoomApi.Application.Rooms.Dtos;
 using FluentAssertions;
@@ -209,6 +210,34 @@ public sealed class BookingFlowTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("StartTime");
+    }
+
+    [Fact]
+    public async Task ListBookings_Paginates_AndReportsTotalCount()
+    {
+        var room = await CreateRoomAsync("Зал Пагінація", 10, 1000m);
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(9));
+
+        for (var i = 0; i < 3; i++)
+        {
+            var start = new TimeOnly(9 + i, 0);
+            var response = await Client.PostAsJsonAsync(
+                "/api/bookings", new CreateBookingRequest(room.Id, date, start, start.AddHours(1), null), JsonOptions);
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        var firstPageResponse = await Client.GetAsync($"/api/bookings?roomId={room.Id}&page=1&pageSize=2");
+        var firstPage = await firstPageResponse.Content.ReadFromJsonAsync<PagedResult<BookingDto>>(JsonOptions);
+        firstPage!.Items.Should().HaveCount(2);
+        firstPage.TotalCount.Should().Be(3);
+        firstPage.TotalPages.Should().Be(2);
+
+        var secondPageResponse = await Client.GetAsync($"/api/bookings?roomId={room.Id}&page=2&pageSize=2");
+        var secondPage = await secondPageResponse.Content.ReadFromJsonAsync<PagedResult<BookingDto>>(JsonOptions);
+        secondPage!.Items.Should().HaveCount(1);
+
+        // No overlap between the two pages.
+        firstPage.Items.Select(b => b.Id).Should().NotIntersectWith(secondPage.Items.Select(b => b.Id));
     }
 
     private async Task<RoomDto> CreateRoomAsync(string name, int capacity, decimal basePricePerHour, List<Guid>? serviceIds = null)
