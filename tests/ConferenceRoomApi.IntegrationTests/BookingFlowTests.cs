@@ -143,6 +143,35 @@ public sealed class BookingFlowTests : IntegrationTestBase
         summary.MostBookedRoomName.Should().Be("Зал Звіт");
     }
 
+    [Fact]
+    public async Task DeactivatedService_CanNoLongerBeBooked_EvenIfStillLinkedToARoom()
+    {
+        // A service created here (not the shared seeded catalog) so deactivating it doesn't
+        // leak state into other tests that run against the same seeded additional_services rows.
+        var createServiceResponse = await Client.PostAsJsonAsync(
+            "/api/additional-services", new CreateAdditionalServiceRequest("Тимчасова послуга", 400m), JsonOptions);
+        var tempService = await createServiceResponse.Content.ReadFromJsonAsync<AdditionalServiceDto>(JsonOptions);
+
+        var room = await CreateRoomAsync("Зал Деактивація", 20, 1500m, new List<Guid> { tempService!.Id });
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(8));
+
+        var deactivateResponse = await Client.DeleteAsync($"/api/additional-services/{tempService.Id}");
+        deactivateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // No longer listed as offered by the room.
+        var roomResponse = await Client.GetAsync($"/api/rooms/{room.Id}");
+        var roomDto = await roomResponse.Content.ReadFromJsonAsync<RoomDto>(JsonOptions);
+        roomDto!.Services.Should().NotContain(s => s.Id == tempService.Id);
+
+        // And can no longer be selected when booking, even though the RoomOffering link still exists.
+        var bookingResponse = await Client.PostAsJsonAsync(
+            "/api/bookings",
+            new CreateBookingRequest(room.Id, date, new TimeOnly(10, 0), new TimeOnly(11, 0), new List<Guid> { tempService.Id }),
+            JsonOptions);
+
+        bookingResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     [Theory]
     [InlineData("05:00", "07:00")] // before opening
     [InlineData("22:00", "23:30")] // after closing

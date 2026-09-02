@@ -100,7 +100,12 @@ public sealed class BookingsService
             return new List<SelectedServiceSnapshot>();
         }
 
-        var offeredById = room.Offerings.ToDictionary(o => o.AdditionalServiceId, o => o.AdditionalService);
+        // Only active services are bookable — a service can be deactivated after a room
+        // already offers it, and the RoomOffering row is deliberately left in place (it's
+        // history, not a live "still bookable" signal).
+        var offeredById = room.Offerings
+            .Where(o => o.AdditionalService.IsActive)
+            .ToDictionary(o => o.AdditionalServiceId, o => o.AdditionalService);
         var distinctIds = requestedIds.Distinct().ToList();
         var notOffered = distinctIds.Where(id => !offeredById.ContainsKey(id)).ToList();
 
