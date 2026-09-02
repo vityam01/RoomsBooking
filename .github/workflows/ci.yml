@@ -15,12 +15,12 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_DB: conference_rooms_test
-          POSTGRES_USER: vityamandryk
-          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U vityamandryk"
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -34,9 +34,9 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Enable btree_gist extension
-        run: psql -h localhost -U vityamandryk -d conference_rooms_test -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+        run: psql -h localhost -U postgres -d conference_rooms_test -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
         env:
-          PGPASSWORD: ""
+          PGPASSWORD: postgres
 
       - name: Restore
         run: dotnet restore ConferenceRoomApi.slnx
