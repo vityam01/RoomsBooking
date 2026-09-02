@@ -31,9 +31,15 @@ public sealed class StandardPricingPolicy : IPricingPolicy
             var segmentEnd = boundaries[i + 1];
             var zone = ResolveZone(Midpoint(segmentStart, segmentEnd));
 
-            var hours = (decimal)(segmentEnd - segmentStart).Ticks / TimeSpan.TicksPerHour;
-            var ratePerHour = basePricePerHour * zone.Multiplier;
-            var segmentCost = ratePerHour * hours;
+            // Raw hours (e.g. a 20-minute segment = 1/3) is a repeating decimal; rounding
+            // only the final money figure — not the intermediate hours — keeps the segment
+            // cost accurate to the cent while avoiding compounding rounding error. Money
+            // values are rounded here, not left to whatever precision the DB column happens
+            // to apply, so the amount an API response shows always matches what gets persisted.
+            var preciseHours = (decimal)(segmentEnd - segmentStart).Ticks / TimeSpan.TicksPerHour;
+            var ratePerHour = Math.Round(basePricePerHour * zone.Multiplier, 2, MidpointRounding.AwayFromZero);
+            var segmentCost = Math.Round(basePricePerHour * zone.Multiplier * preciseHours, 2, MidpointRounding.AwayFromZero);
+            var hours = Math.Round(preciseHours, 2, MidpointRounding.AwayFromZero);
 
             segments.Add(new PriceSegment(zone.Type, segmentStart, segmentEnd, hours, zone.Multiplier, ratePerHour, segmentCost));
         }
