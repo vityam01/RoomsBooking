@@ -18,8 +18,14 @@ public interface IBookingRepository
     Task<HashSet<Guid>> GetBookedRoomIdsAsync(
         IEnumerable<Guid> roomIds, DateOnly date, TimeOnly start, TimeOnly end, CancellationToken cancellationToken = default);
 
-    /// <summary>Applies filter.Page/PageSize server-side (SQL OFFSET/LIMIT) — never loads a whole unbounded table into memory.</summary>
-    Task<(List<Booking> Items, int TotalCount)> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Applies filter.Page/PageSize server-side (SQL OFFSET/LIMIT) — never loads a whole
+    /// unbounded table into memory. Returns the actually-applied page/pageSize (clamped to
+    /// valid ranges), not an echo of whatever the caller passed in, so callers can report
+    /// accurate pagination metadata even when the request asked for an out-of-range value.
+    /// </summary>
+    Task<(List<Booking> Items, int TotalCount, int Page, int PageSize)> ListAsync(
+        BookingListFilter filter, CancellationToken cancellationToken = default);
 
     void Add(Booking booking);
 }
