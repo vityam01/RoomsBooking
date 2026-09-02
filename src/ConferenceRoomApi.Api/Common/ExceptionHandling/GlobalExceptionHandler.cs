@@ -27,6 +27,17 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        if (httpContext.Response.HasStarted)
+        {
+            // Can't set a status code or write a body onto a response that's already
+            // streaming — returning false tells the framework we didn't handle it, so the
+            // original exception propagates (and gets logged) instead of masking it with an
+            // unrelated "response already started" InvalidOperationException from here.
+            _logger.LogError(exception, "Unhandled exception after the response had already started on {Method} {Path}",
+                httpContext.Request.Method, httpContext.Request.Path);
+            return false;
+        }
+
         var (statusCode, title, detail) = Classify(exception);
 
         if (statusCode == StatusCodes.Status500InternalServerError)
