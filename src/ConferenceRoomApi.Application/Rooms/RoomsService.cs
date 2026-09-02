@@ -102,7 +102,7 @@ public sealed class RoomsService
             .Select(room =>
             {
                 var breakdown = _pricingPolicy.Calculate(room.BasePricePerHour, request.StartTime, request.EndTime);
-                var services = room.Offerings.Select(o => o.AdditionalService).Where(s => s.IsActive).Select(ToServiceDto).ToList();
+                var services = room.Offerings.Select(o => o.AdditionalService).Where(s => s.IsActive).Select(AdditionalServiceDto.FromDomain).ToList();
 
                 return new AvailableRoomDto(
                     room.Id,
@@ -147,10 +147,7 @@ public sealed class RoomsService
             room.Capacity,
             room.BasePricePerHour,
             room.IsActive,
-            services.Select(ToServiceDto).ToList(),
+            services.Select(AdditionalServiceDto.FromDomain).ToList(),
             room.CreatedAt,
             room.UpdatedAt);
-
-    private static AdditionalServiceDto ToServiceDto(AdditionalService service)
-        => new(service.Id, service.Name, service.Price, service.IsActive);
 }
