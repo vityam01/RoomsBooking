@@ -18,7 +18,8 @@ public interface IBookingRepository
     Task<HashSet<Guid>> GetBookedRoomIdsAsync(
         IEnumerable<Guid> roomIds, DateOnly date, TimeOnly start, TimeOnly end, CancellationToken cancellationToken = default);
 
-    Task<List<Booking>> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default);
+    /// <summary>Applies filter.Page/PageSize server-side (SQL OFFSET/LIMIT) — never loads a whole unbounded table into memory.</summary>
+    Task<(List<Booking> Items, int TotalCount)> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default);
 
     void Add(Booking booking);
 }

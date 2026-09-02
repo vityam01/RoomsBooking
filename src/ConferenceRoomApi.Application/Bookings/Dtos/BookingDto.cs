@@ -22,4 +22,4 @@ public sealed record BookingDto(
 
 public sealed record CreateBookingRequest(Guid RoomId, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime, List<Guid>? AdditionalServiceIds);
 
-public sealed record BookingListFilter(Guid? RoomId, DateOnly? From, DateOnly? To, bool IncludeCancelled);
+public sealed record BookingListFilter(Guid? RoomId, DateOnly? From, DateOnly? To, bool IncludeCancelled, int Page = 1, int PageSize = 20);

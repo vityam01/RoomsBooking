@@ -1,5 +1,6 @@
 using ConferenceRoomApi.Application.Bookings.Dtos;
 using ConferenceRoomApi.Application.Bookings.Interfaces;
+using ConferenceRoomApi.Application.Common.Dtos;
 using ConferenceRoomApi.Application.Common.Interfaces;
 using ConferenceRoomApi.Application.Pricing;
 using ConferenceRoomApi.Application.Rooms.Interfaces;
@@ -77,11 +78,12 @@ public sealed class BookingsService
         return ToDto(booking, room?.Name ?? "(deleted room)");
     }
 
-    public async Task<List<BookingDto>> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<BookingDto>> ListAsync(BookingListFilter filter, CancellationToken cancellationToken = default)
     {
-        var bookings = await _bookingRepository.ListAsync(filter, cancellationToken);
+        var (bookings, totalCount) = await _bookingRepository.ListAsync(filter, cancellationToken);
         var roomNames = await _roomRepository.GetNamesByIdsAsync(bookings.Select(b => b.RoomId), cancellationToken);
-        return bookings.Select(b => ToDto(b, roomNames.GetValueOrDefault(b.RoomId, "(deleted room)"))).ToList();
+        var items = bookings.Select(b => ToDto(b, roomNames.GetValueOrDefault(b.RoomId, "(deleted room)"))).ToList();
+        return new PagedResult<BookingDto>(items, filter.Page, filter.PageSize, totalCount);
     }
 
     public async Task CancelAsync(Guid id, CancellationToken cancellationToken = default)
