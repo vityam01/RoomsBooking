@@ -65,11 +65,17 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
     private const string ConcurrentBookingConflictMessage =
         "This room was just booked for an overlapping time slot by another request. Please choose a different time.";
 
+    private const string StaleEntityConflictMessage =
+        "This resource was modified by another request in the meantime. Reload it and try again.";
+
     private static (int StatusCode, string Title, string Detail) Classify(Exception exception) => exception switch
     {
         EntityNotFoundException => (StatusCodes.Status404NotFound, "Not Found", exception.Message),
         RoomUnavailableException => (StatusCodes.Status409Conflict, "Room Unavailable", exception.Message),
         BusinessRuleViolationException => (StatusCodes.Status400BadRequest, "Business Rule Violation", exception.Message),
+        // Thrown by SaveChanges when a Room/AdditionalService's "xmin" row-version token no
+        // longer matches — someone else updated (or deactivated) it since it was loaded.
+        DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Concurrency Conflict", StaleEntityConflictMessage),
         // EF Core wraps the driver error in DbUpdateException; the PostgresException itself
         // is the InnerException. Matched by SQLSTATE, not message text, so it survives locale changes.
         DbUpdateException { InnerException: PostgresException { SqlState: ExclusionViolationSqlState } }
