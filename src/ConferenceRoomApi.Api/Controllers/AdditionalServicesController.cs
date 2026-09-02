@@ -23,6 +23,13 @@ public sealed class AdditionalServicesController : ControllerBase
     public async Task<ActionResult<List<AdditionalServiceDto>>> List(CancellationToken cancellationToken)
         => Ok(await _service.ListAsync(cancellationToken));
 
+    /// <summary>Get a single additional service by id.</summary>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(AdditionalServiceDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdditionalServiceDto>> GetById(Guid id, CancellationToken cancellationToken)
+        => Ok(await _service.GetByIdAsync(id, cancellationToken));
+
     /// <summary>Add a new additional service to the catalog.</summary>
     [HttpPost]
     [ProducesResponseType(typeof(AdditionalServiceDto), StatusCodes.Status201Created)]
@@ -30,7 +37,7 @@ public sealed class AdditionalServicesController : ControllerBase
     public async Task<ActionResult<AdditionalServiceDto>> Create([FromBody] CreateAdditionalServiceRequest request, CancellationToken cancellationToken)
     {
         var service = await _service.CreateAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(List), service);
+        return CreatedAtAction(nameof(GetById), new { id = service.Id }, service);
     }
 
     /// <summary>Update an additional service's name and price.</summary>
