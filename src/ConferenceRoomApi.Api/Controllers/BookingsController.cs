@@ -50,14 +50,9 @@ public sealed class BookingsController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<BookingDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PagedResult<BookingDto>>> List(
-        [FromQuery] Guid? roomId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to,
-        [FromQuery] bool includeCancelled = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
-        CancellationToken cancellationToken = default)
-    {
-        var filter = new BookingListFilter(roomId, from, to, includeCancelled, page, pageSize);
-        return Ok(await _bookingsService.ListAsync(filter, cancellationToken));
-    }
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResult<BookingDto>>> List([FromQuery] BookingListFilter filter, CancellationToken cancellationToken)
+        => Ok(await _bookingsService.ListAsync(filter, cancellationToken));
 
     /// <summary>Cancel a booking.</summary>
     [HttpDelete("{id:guid}")]

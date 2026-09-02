@@ -241,21 +241,33 @@ public sealed class BookingFlowTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task ListBookings_PageSizeAboveCap_ReportsTheActuallyAppliedPageSize()
+    public async Task ListBookings_PageSizeAboveCap_Returns400()
     {
-        var room = await CreateRoomAsync("Зал Пагінація Ліміт", 10, 1000m);
-        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(10));
+        // With BookingListFilterValidator in place, an out-of-range pageSize is now rejected
+        // at the boundary (400) rather than silently clamped — the repository's own Clamp
+        // stays as defense-in-depth for any caller that bypasses HTTP validation.
+        var response = await Client.GetAsync("/api/bookings?page=1&pageSize=99999");
 
-        await Client.PostAsJsonAsync(
-            "/api/bookings", new CreateBookingRequest(room.Id, date, new TimeOnly(9, 0), new TimeOnly(10, 0), null), JsonOptions);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 
-        // Ask for a pageSize far above the server-side cap (100) — the response must reflect
-        // what was actually used, not echo the requested value back.
-        var response = await Client.GetAsync($"/api/bookings?roomId={room.Id}&page=1&pageSize=99999");
-        var page = await response.Content.ReadFromJsonAsync<PagedResult<BookingDto>>(JsonOptions);
+    [Theory]
+    [InlineData("page=0&pageSize=20")]
+    [InlineData("page=1&pageSize=0")]
+    [InlineData("page=1&pageSize=101")]
+    public async Task ListBookings_InvalidPagingParams_Returns400(string query)
+    {
+        var response = await Client.GetAsync($"/api/bookings?{query}");
 
-        page!.PageSize.Should().Be(100);
-        page.TotalPages.Should().Be(1);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ListBookings_FromAfterTo_Returns400()
+    {
+        var response = await Client.GetAsync("/api/bookings?from=2026-12-01&to=2026-01-01");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     private async Task<RoomDto> CreateRoomAsync(string name, int capacity, decimal basePricePerHour, List<Guid>? serviceIds = null)
