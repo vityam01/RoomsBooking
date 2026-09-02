@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ConferenceRoomApi.Api/ConferenceRoomApi.Api.csproj" />
+    <Project Path="src/ConferenceRoomApi.Application/ConferenceRoomApi.Application.csproj" />
+    <Project Path="src/ConferenceRoomApi.Domain/ConferenceRoomApi.Domain.csproj" />
+    <Project Path="src/ConferenceRoomApi.Infrastructure/ConferenceRoomApi.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ConferenceRoomApi.IntegrationTests/ConferenceRoomApi.IntegrationTests.csproj" />
+    <Project Path="tests/ConferenceRoomApi.UnitTests/ConferenceRoomApi.UnitTests.csproj" />
+  </Folder>
+</Solution>
