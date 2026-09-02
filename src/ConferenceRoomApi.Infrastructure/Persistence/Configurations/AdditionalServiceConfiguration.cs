@@ -18,5 +18,7 @@ public sealed class AdditionalServiceConfiguration : IEntityTypeConfiguration<Ad
         builder.Property(s => s.UpdatedAt).IsRequired();
 
         builder.HasIndex(s => s.IsActive);
+
+        builder.Property<uint>("xmin").IsRowVersion();
     }
 }

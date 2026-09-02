@@ -20,6 +20,11 @@ public sealed class RoomConfiguration : IEntityTypeConfiguration<Room>
 
         builder.HasIndex(r => r.IsActive);
 
+        // Optimistic concurrency via Postgres's built-in xmin system column — no extra
+        // column, no extra migration-managed schema. Two concurrent PUTs against the same
+        // room now produce a 409 for the loser instead of a silent last-write-wins overwrite.
+        builder.Property<uint>("xmin").IsRowVersion();
+
         builder.HasMany(r => r.Offerings)
             .WithOne()
             .HasForeignKey(o => o.RoomId)
