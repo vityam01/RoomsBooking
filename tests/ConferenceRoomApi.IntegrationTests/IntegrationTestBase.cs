@@ -4,23 +4,23 @@ using Xunit;
 
 namespace ConferenceRoomApi.IntegrationTests;
 
-public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
+public abstract class IntegrationTestBase : IAsyncLifetime
 {
     protected static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
     };
 
-    private readonly CustomWebApplicationFactory _factory;
+    protected CustomWebApplicationFactory Factory { get; }
     protected HttpClient Client { get; }
 
     protected IntegrationTestBase(CustomWebApplicationFactory factory)
     {
-        _factory = factory;
+        Factory = factory;
         Client = factory.CreateClient();
     }
 
-    public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+    public Task InitializeAsync() => Factory.ResetDatabaseAsync();
 
     public Task DisposeAsync() => Task.CompletedTask;
 }

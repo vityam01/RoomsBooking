@@ -14,6 +14,7 @@ namespace ConferenceRoomApi.IntegrationTests;
 /// create a room, find it via search, book it with services, then verify the database's
 /// own exclusion constraint (not just the application-level check) rejects an overlap.
 /// </summary>
+[Collection(DatabaseCollection.Name)]
 public sealed class BookingFlowTests : IntegrationTestBase
 {
     public BookingFlowTests(CustomWebApplicationFactory factory) : base(factory)
