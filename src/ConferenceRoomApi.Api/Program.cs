@@ -11,6 +11,7 @@ using ConferenceRoomApi.Infrastructure;
 using ConferenceRoomApi.Infrastructure.Persistence;
 using ConferenceRoomApi.Infrastructure.Seed;
 using FluentValidation;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -86,6 +87,18 @@ public class Program
         // ---- Pipeline -------------------------------------------------------
 
         app.UseExceptionHandler();
+
+        // Must run before anything that reads the client IP or scheme (the rate limiter and
+        // HTTPS redirection below): without it, both see the reverse proxy's address/scheme
+        // instead of the real client's whenever this API sits behind one. KnownProxies /
+        // KnownNetworks are left at their defaults (trust only loopback) — a production
+        // deployment behind a specific proxy should configure those explicitly rather than
+        // trust every forwarded header blindly.
+        app.UseForwardedHeaders(new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+        });
+
         app.UseSerilogRequestLogging();
 
         if (!app.Environment.IsDevelopment())
