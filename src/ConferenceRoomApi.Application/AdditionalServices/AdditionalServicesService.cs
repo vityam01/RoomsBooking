@@ -24,6 +24,13 @@ public sealed class AdditionalServicesService
         return services.Select(ToDto).ToList();
     }
 
+    public async Task<AdditionalServiceDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var service = await _repository.GetByIdAsync(id, cancellationToken)
+            ?? throw new EntityNotFoundException(nameof(AdditionalService), id);
+        return ToDto(service);
+    }
+
     public async Task<AdditionalServiceDto> CreateAsync(CreateAdditionalServiceRequest request, CancellationToken cancellationToken = default)
     {
         var service = AdditionalService.Create(request.Name, request.Price);
