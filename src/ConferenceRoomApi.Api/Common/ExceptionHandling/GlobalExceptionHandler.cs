@@ -56,6 +56,10 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             Detail = detail,
             Instance = httpContext.Request.Path
         };
+        // Ties a client-visible error back to the matching server-side log line (Serilog's
+        // request logging includes the same TraceIdentifier) without exposing anything else
+        // about the failure.
+        problemDetails.Extensions["traceId"] = httpContext.TraceIdentifier;
 
         httpContext.Response.StatusCode = statusCode;
         await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
