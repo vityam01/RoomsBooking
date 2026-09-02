@@ -145,6 +145,18 @@ public sealed class BookingFlowTests : IntegrationTestBase
         summary.MostBookedRoomName.Should().Be("Зал Звіт");
     }
 
+    [Theory]
+    [InlineData("/api/reports/revenue")]
+    [InlineData("/api/reports/room-utilization")]
+    [InlineData("/api/reports/popular-services")]
+    [InlineData("/api/reports/summary")]
+    public async Task Reports_FromAfterTo_Returns400(string path)
+    {
+        var response = await Client.GetAsync($"{path}?from=2026-12-01&to=2026-01-01");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     [Fact]
     public async Task DeactivatedService_CanNoLongerBeBooked_EvenIfStillLinkedToARoom()
     {

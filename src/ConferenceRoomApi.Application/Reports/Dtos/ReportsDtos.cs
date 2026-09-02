@@ -8,6 +8,11 @@ public enum RevenueGroupBy
     Room
 }
 
+/// <summary>Shared request shape for the three reports that only take a date range.</summary>
+public sealed record DateRangeRequest(DateOnly From, DateOnly To);
+
+public sealed record RevenueReportRequest(DateOnly From, DateOnly To, RevenueGroupBy GroupBy = RevenueGroupBy.Day);
+
 public sealed record RevenueBucketDto(string Key, int BookingCount, decimal RoomRevenue, decimal ServicesRevenue, decimal TotalRevenue);
 
 public sealed record RevenueReportDto(DateOnly From, DateOnly To, decimal TotalRevenue, IReadOnlyCollection<RevenueBucketDto> Buckets);
