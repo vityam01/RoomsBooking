@@ -59,21 +59,32 @@ public sealed class ReportsService : IReportsService
     public async Task<RoomUtilizationReportDto> GetRoomUtilizationAsync(
         DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
     {
-        var rooms = await _db.Rooms.Where(r => r.IsActive).ToListAsync(cancellationToken);
         var bookings = await ConfirmedBookingsInRange(from, to).ToListAsync(cancellationToken);
+
+        // Active rooms are included even with zero bookings (an idle room is exactly what
+        // this report exists to surface); a room deactivated mid-period is still included if
+        // it has bookings in range, so this report never disagrees with GetRevenueAsync
+        // (which has no IsActive filter) about which rooms generated activity.
+        var activeRoomIds = await _db.Rooms.Where(r => r.IsActive).Select(r => r.Id).ToListAsync(cancellationToken);
+        var roomIdsToReport = activeRoomIds.Union(bookings.Select(b => b.RoomId)).ToList();
+        var roomNames = await _db.Rooms
+            .Where(r => roomIdsToReport.Contains(r.Id))
+            .ToDictionaryAsync(r => r.Id, r => r.Name, cancellationToken);
 
         var totalDays = to.DayNumber - from.DayNumber + 1;
         var dailyOperatingHours = (decimal)(BusinessHours.ClosesAt - BusinessHours.OpensAt).TotalHours;
         var availableHours = totalDays * dailyOperatingHours;
 
-        var rows = rooms
-            .Select(room =>
+        var rows = roomIdsToReport
+            .Select(roomId =>
             {
-                var roomBookings = bookings.Where(b => b.RoomId == room.Id).ToList();
+                var roomBookings = bookings.Where(b => b.RoomId == roomId).ToList();
                 var bookedHours = roomBookings.Sum(b => (decimal)(b.EndTime - b.StartTime).Ticks / TimeSpan.TicksPerHour);
                 var occupancy = availableHours > 0 ? bookedHours / availableHours : 0m;
 
-                return new RoomUtilizationDto(room.Id, room.Name, roomBookings.Count, bookedHours, availableHours, Math.Round(occupancy, 4));
+                return new RoomUtilizationDto(
+                    roomId, roomNames.GetValueOrDefault(roomId, "(deleted room)"), roomBookings.Count, bookedHours, availableHours,
+                    Math.Round(occupancy, 4));
             })
             .OrderByDescending(r => r.OccupancyRate)
             .ToList();
@@ -86,12 +97,24 @@ public sealed class ReportsService : IReportsService
     {
         var bookingIds = await ConfirmedBookingsInRange(from, to).Select(b => b.Id).ToListAsync(cancellationToken);
 
-        var services = await _db.Set<BookedService>()
+        // Grouped by AdditionalServiceId alone, not by the snapshotted Name: BookedService.Name
+        // is frozen at booking time, so grouping by (Id, Name) would split one catalog service
+        // into multiple rows if it was ever renamed during the reporting period.
+        var grouped = await _db.Set<BookedService>()
             .Where(s => bookingIds.Contains(s.BookingId))
-            .GroupBy(s => new { s.AdditionalServiceId, s.Name })
-            .Select(g => new PopularServiceDto(g.Key.AdditionalServiceId, g.Key.Name, g.Count(), g.Sum(s => s.Price)))
-            .OrderByDescending(s => s.TimesBooked)
+            .GroupBy(s => s.AdditionalServiceId)
+            .Select(g => new { ServiceId = g.Key, TimesBooked = g.Count(), Revenue = g.Sum(s => s.Price) })
             .ToListAsync(cancellationToken);
+
+        var serviceIds = grouped.Select(g => g.ServiceId).ToList();
+        var currentNames = await _db.AdditionalServices
+            .Where(s => serviceIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.Name, cancellationToken);
+
+        var services = grouped
+            .Select(g => new PopularServiceDto(g.ServiceId, currentNames.GetValueOrDefault(g.ServiceId, "(deleted service)"), g.TimesBooked, g.Revenue))
+            .OrderByDescending(s => s.TimesBooked)
+            .ToList();
 
         return new PopularServicesReportDto(from, to, services);
     }
