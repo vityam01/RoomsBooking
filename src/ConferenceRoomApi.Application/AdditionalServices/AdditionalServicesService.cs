@@ -21,14 +21,14 @@ public sealed class AdditionalServicesService
     public async Task<List<AdditionalServiceDto>> ListAsync(CancellationToken cancellationToken = default)
     {
         var services = await _repository.ListActiveAsync(cancellationToken);
-        return services.Select(ToDto).ToList();
+        return services.Select(AdditionalServiceDto.FromDomain).ToList();
     }
 
     public async Task<AdditionalServiceDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var service = await _repository.GetByIdAsync(id, cancellationToken)
             ?? throw new EntityNotFoundException(nameof(AdditionalService), id);
-        return ToDto(service);
+        return AdditionalServiceDto.FromDomain(service);
     }
 
     public async Task<AdditionalServiceDto> CreateAsync(CreateAdditionalServiceRequest request, CancellationToken cancellationToken = default)
@@ -36,7 +36,7 @@ public sealed class AdditionalServicesService
         var service = AdditionalService.Create(request.Name, request.Price);
         _repository.Add(service);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return ToDto(service);
+        return AdditionalServiceDto.FromDomain(service);
     }
 
     public async Task<AdditionalServiceDto> UpdateAsync(Guid id, UpdateAdditionalServiceRequest request, CancellationToken cancellationToken = default)
@@ -46,7 +46,7 @@ public sealed class AdditionalServicesService
 
         service.Update(request.Name, request.Price);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return ToDto(service);
+        return AdditionalServiceDto.FromDomain(service);
     }
 
     public async Task DeactivateAsync(Guid id, CancellationToken cancellationToken = default)
@@ -57,7 +57,4 @@ public sealed class AdditionalServicesService
         service.Deactivate();
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
-
-    private static AdditionalServiceDto ToDto(AdditionalService service)
-        => new(service.Id, service.Name, service.Price, service.IsActive);
 }
